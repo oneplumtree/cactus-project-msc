@@ -36,70 +36,7 @@ ggplot(data = alkaloidTPM2,
        mapping = aes(x = stuname, y = value)) + 
   geom_col(position = position_dodge())
 
-
-
-###Stringtie TPM
-library(tidyverse)
-stringtieTPM <- read.table("stringtieTPM.txt", header = F, sep = "\t")
-
-sep1 <- strsplit (stringtieTPM[,11],split = ";")
-sep2 <- strsplit (sapply (sep1,"[[",5),split = "TPM")
-stringtieTPM$tpm <- sapply (sep2,"[[",2)
-
-
-widestringtie <- pivot_wider (stringtieTPM, names_from = V2, values_from = V3)
-widestringtie <- as.data.frame(widestringtie)
-rownames(widestringtie) <- widestringtie[,1]
-widestringtie2 <- as.matrix(widestringtie[, -1])
-
-
-heatmap.2 (widestringtie2, 
-           col = brewer.pal(n = 6, name = "Reds"), 
-           scale = "row", 
-           margins=c(8,8), 
-           trace = "none", 
-           cexCol = 1.1,
-           cexRow = 1.1,
-           Colv = NA, 
-           Rowv = NA,
-           key = TRUE,
-           legend = TRUE)
-           #sepwidth=c(0.05,0.1),
-           #sepcolor = "white", #line colour it separates the columns with
-           # rowsep=1:nrow(alkaloidTPM2),
-           # colsep=1:ncol(alkaloidTPM2)
-
-#heatmap(alkaloidTPM2, scale="column", col = "Reds")
-
-
-barplot(widestringtie2, main="Total Alkaloid TPM",
-        xlab="Section", ylab="TPM")
-
-par (mar= c(5,5,5,5))
-barplot(widestringtie2, main="Stringtie TPM",
-        xlab="Section", ylab="TPM", beside = TRUE, legend.text = TRUE,
-        args.legend = list (x = "topright", bty = "n", inset = c(-0.15,0)))
-
-
-par (mar= c(4,4,3,3))
-barplot(t(widestringtie2), main="Stringtie TPM",
-        xlab="Genes", ylab="TPM", beside = TRUE, legend = T, cex.names = 0.85)
-args.legend(cex = 1.5)
-
-ggplot(data = stringtieTPM,
-       aes(x = V1, y = V3, fill = V2, group = V2)) + 
-  geom_col(position = position_dodge())
-
-p <- ggplot(data = stringtieTPM,
-       aes(x = V2, y = V3, fill = V1, group = V1)) +
-  xlab("Sections")+
-  ylab("TPM")+
-  geom_col(position = position_dodge()) +
-  theme_classic()+
-  scale_fill_grey()
-p + labs (fill = "Genes")
-
-##QS
+## Stringtie TPM for QS genome
 
 library(tidyverse)
 QSstringtieTPM <- read.table("QSstringtieTPM.txt", header = F, sep = "\t")
@@ -190,8 +127,7 @@ check_overlap_length <- function (to_match,all_start,all_stop,query_start,query_
   test1
 }
 
-#install.packages("ape")
-library(ape)
+
 
 
 stringtiedata <- read.gff("Jour_wholejour.gtf", na.strings = c(".", "?"), GFF3 = FALSE)
