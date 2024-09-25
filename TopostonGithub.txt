@@ -1,0 +1,131 @@
+Code for Github Repository
+
+#Running list of commands to BUSCO the genome
+#Qiushi Chromosome pairs in itbiodryad01
+#PhaseGenomics in itbioyeaman03
+
+#Separate chromosomes for Qiushi
+grep -n "HiC_scaffold" scaffold_pair_1.fasta
+tail scaffold_pair_1.fasta #take the second to last full line
+grep -n "that second to last line" scaffold_pair_1.fasta
+sed -n '1, 7905662p' scaffold_pair_1.fasta > HiC_scaffold1.fasta #repeat for the rest
+
+cat HiC_scaffold12_9.fasta HiC_scaffold13_10.fasta HiC_scaffold14_3.fasta HiC_scaffold15_11.fasta HiC_scaffold16_4.fasta HiC_scaffold17_8.fasta HiC_scaffold18_5.fasta HiC_scaffold19_2.fasta HiC_scaffold20_6.fasta HiC_scaffold21_7.fasta HiC_scaffold22_1.fasta >> LargeQch1-11.fasta
+cat HiC_scaffold1.fasta HiC_scaffold2.fasta HiC_scaffold3.fasta HiC_scaffold4.fasta HiC_scaffold5.fasta HiC_scaffold6.fasta HiC_scaffold7.fasta HiC_scaffold8.fasta HiC_scaffold9.fasta HiC_scaffold10.fasta HiC_scaffold11.fasta >> smallQch1-11.fasta
+
+bedtools getfasta -fullHeader -fo take2LargequerySequences.fasta -fi LargeQch1-11.fasta -bed take2Largebusco.bed
+
+
+#Download BUSCO datasets from https://busco-data.ezlab.org/v5/data/lineages/
+wget https://busco-data.ezlab.org/v5/data/lineages/viridiplantae_odb10.2024-01-08.tar.gz
+
+makeblastdb -in <reference.fa> -dbtype nucl -parse_seqids -out <database_name> 
+
+tblastn -query /data/ginnyli/busco/viridiplantae_odb10/ancestral -db <chromosome> -outfmt 6 -out <name>
+tblastn -query /lu213/ginny.li/phasegenomics/BUSCOphase -db <chromosome> -outfmt 6 -out <name>
+
+#Import into Excel, sorted and removed duplicates
+
+#Extract sequences and inverse the searches against the other database
+bedtools getfasta -fo afterBuscoSupersequences.fasta -fullHeader -fi chrome12-50-PGA_assembly.fasta -bed startendSuper.bed
+
+blastn -query afterBuscoSupersequences.fasta -db ch1-11DB -outfmt 6 -out tophitsSuperquerySmallDB &
+
+#Import into R
+blastn -query take2small.fasta -db SuperScaffoldDB -outfmt 6 -out take2smallqueryLargeDB &
+blastn -query take2large.fasta -db ch1-11DB -outfmt 6 -out take2largequerysmallDBphase.fasta
+
+#If you want more than one process running at a time:
+screen -S [unique name]
+To unattach -> ctrl+A then click D
+to reattach screen -r [unique name]
+to check process: ps fx
+
+Alternately use one screen and use bg
+or append nohup at the beginning 
+Both are hit and misses depending on the process
+Both will not protect your screen from timing out
+
+If you are a beginner and there are issues with running the program, check the path first
+find the program folder enter pwd to get the present working directory
+cd 
+nano .bash_profile
+PATH=$PATH:/directory/of/the/program/here
+
+Will need to exit from the shell in order for it to take effect. For immediate use without the shell, use export PATH=$PATH: in the main command line for it to work
+
+
+#FastQC - check the transcripts
+fastqc --outdir fastqc /lophophora_transcripts/
+nohup fastqc --outdir `pwd`/fastqc [left sequence] [right sequence]
+
+
+#Trimmomatic
+java -jar /data/programs/Trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -trimlog -phred33 NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R1.fastq.gz NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R2.fastq.gz ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 -baseout WilliamsiiTrimmed_1P.fq.gz
+
+
+
+#HiSat2
+hisat2-build /data/home/ginny/phasegenomics/yeaman_cactus_4_results_2023-12-15_17-41-03/ch1-11-PGA_assembly.fasta hisat2ch1-11jour
+hisat2-build /data/home/ginny/phasegenomics/phasegenomics/yeaman_cactus_4_results_2023-12-15_17-41-03/chrome12-50-PGA_assembly.fasta hisat2ch12-50jour
+
+hisat2 -x /lu213/ginny.li/genome_alignment/hisat/hisat2ch12-50jour -q -1 WilliamsiiTrimmed_1P_1P.fq.gz -2 WilliamsiiTrimmed_1P_2P.fq.gz --dta -S ch12-50jour_Williamsii.hisat
+hisat2 -x /lu213/ginny.li/genome_alignment/hisat/hisat2ch1-11jour -q -1 WilliamsiiTrimmed_1P_1P.fq.gz -2 WilliamsiiTrimmed_1P_2P.fq.gz --dta -S ch1-11jour_Williamsii.hisat
+
+samtools view -bS ch1-11jour_Williamsii.hisat > ch1-11jour_Williamsii.bam
+samtools view -bS ch12-50jour_Williamsii.hisat > ch12-50jour_Williamsii.bam
+
+samtools sort ch1-11jour_Williamsii.bam -o ch1-11jour_Williamsii.sorted.bam
+samtools sort ch12-50jour_Williamsii.bam -o ch12-50jour_Williamsii.sorted.bam
+
+
+stringtie -o ch1-11jour_will.gtf ch1-11jour_Williamsii.sorted.bam
+stringtie -o ch12-50jour_will.gtf ch12-50jour_Williamsii.sorted.markdup.bam
+
+wget https://raw.githubusercontent.com/griffithlab/rnabio.org/master/assets/scripts/stringtie_expression_matrix.pl
+chmod +x stringtie_expression_matrix.pl
+
+
+blastn -query Williamsii.fasta -db SuperScaffoldDB -outfmt 6 -out williamsiiLargeDB &
+blastn -query Williamsii.fasta -db ch1-11DB -outfmt 6 -out williamsiiSmallDB &
+
+
+#Assemble Transcriptome with Trinity
+/data/programs/trinityrnaseq-v2.14.0/Trinity --seqType fq --left NS.1522.001.NEBNext_dual_i7_201---NEBNext_dual_i5_249.Peyote_OUT_R1.fastq.gz --right NS.1522.001.NEBNext_dual_i7_201---NEBNext_dual_i5_249.Peyote_OUT_R2.fastq.gz --CPU 6 --max_memory 50G
+
+
+/data/home/ginny/lophophora_transcripts/get_longest_isoform_seq_per_trinity_gene.pl [fasta]
+
+
+/data/home/ginny/phasegenomics/BUSCOphase/lophophora/RSEM
+
+/data/programs/RSEM-1.2.25/rsem-prepare-reference --transcript-to-gene-map /data/home/ginny/lophophora_transcripts/trinity_out_dir/Williamsii.gene_trans_map --bowtie2 --bowtie2-path /data/programs/bowtie2-2.3.5 /data/home/ginny/phasegenomics/BUSCOphase/lophophora/Williamsii.fasta
+/data/home/ginny/lophophora_transcripts/trinity/trinity_out_dir/Diffusa.fasta.gene_trans_map
+rsem-prepare-reference --bowtie2 --bowtie2-path /data/programs/bowtie2-2.3.5 --transcript-to-gene-map /data/home/ginny/lophophora_transcripts/trinity/trinity_out_dir/Diffusa.fasta.gene_trans_map /data/home/ginny/phasegenomics/BUSCOphase/lophophora/DiffusaOne.fasta DiffusaReference
+
+/data/programs/RSEM-1.2.25/rsem-calculate-expression -p 8 --paired-end \
+					--bowtie2 --bowtie2-path /data/programs/bowtie2-2.3.5 \
+					--estimate-rspd \
+					--append-names \
+					/data/home/ginny/lophophora_transcripts/WilliamsiiTrimmed_1P_1P.fq.gz /data/home/ginny/lophophora_transcripts/WilliamsiiTrimmed_1P_2P.fq.gz \
+					WilliamsiiReference /data/home/ginny/phasegenomics/BUSCOphase/lophophora/RSEM
+
+#NCBI Blast: Download the nr database
+wget 'ftp://ftp.ncbi.nlm.nih.gov/blast/db/nr.*.tar.gz'&
+cat nr.*.tar.gz | tar -zxvi -f - -C .
+
+grep -c "^>" Williamsii.fasta
+
+blastx -query longestWilliamsii.fasta -db /data/home/ginny/blastdb/nr/nr -outfmt "6 qseqid sseqid pident length evalue bitscore staxids" -num_threads 4 -taxids 9606 -out WilliamsiihumanBlastx.txt
+blastx -query longestWilliamsii.fasta -db /data/home/ginny/blastdb/nr/nr -outfmt "6 qseqid sseqid pident length evalue bitscore staxids" -num_threads 4 -taxids 2 -out WilliamsiibacteriaBlastx.txt 
+
+
+
+
+#GMAP
+gmap_build -d /data/home/ginny/phasegenomics/yeaman_cactus_4_results_2023-12-15_17-41-03/PGA_assembly.fasta -D /data/home/ginny/genome_alignment/gmap
+
+Map Only:  gmapl -d JourgmapDB -D /data/home/ginny/genome_alignment/gmap/JourgmapDB -t 4 -O -f gff3_gene /lu213/ginny.li/blast/jour.fasta > jourgmapwhole.gff3
+Align Only:  gmap -d JourgmapDB -D /data/home/ginny/genome_alignment/gmap/JourgmapDB -A -t 4 /lu213/ginny.li/blast/jour.fasta > 
+
+gffread -w transcripts.fa -g /path/to/genome.fa transcripts.gtf
