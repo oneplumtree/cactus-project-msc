@@ -63,8 +63,6 @@ nohup fastqc --outdir `pwd`/fastqc [left sequence] [right sequence]
 #Trimmomatic
 java -jar /data/programs/Trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -trimlog -phred33 NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R1.fastq.gz NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R2.fastq.gz ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 -baseout WilliamsiiTrimmed_1P.fq.gz
 
-
-
 #HiSat2
 hisat2-build /data/home/ginny/phasegenomics/yeaman_cactus_4_results_2023-12-15_17-41-03/ch1-11-PGA_assembly.fasta hisat2ch1-11jour
 hisat2-build /data/home/ginny/phasegenomics/phasegenomics/yeaman_cactus_4_results_2023-12-15_17-41-03/chrome12-50-PGA_assembly.fasta hisat2ch12-50jour
@@ -91,11 +89,9 @@ blastn -query Williamsii.fasta -db ch1-11DB -outfmt 6 -out williamsiiSmallDB &
 
 
 #Assemble Transcriptome with Trinity
-/data/programs/trinityrnaseq-v2.14.0/Trinity --seqType fq --left NS.1522.001.NEBNext_dual_i7_201---NEBNext_dual_i5_249.Peyote_OUT_R1.fastq.gz --right NS.1522.001.NEBNext_dual_i7_201---NEBNext_dual_i5_249.Peyote_OUT_R2.fastq.gz --CPU 6 --max_memory 50G
-
+/data/programs/trinityrnaseq-v2.14.0/Trinity --seqType fq --left [cleanedpaired_end_1] --right [cleanedpaired_end_2] --CPU 8 --max_memory 50G
 
 /data/home/ginny/lophophora_transcripts/get_longest_isoform_seq_per_trinity_gene.pl [fasta]
-
 
 /data/home/ginny/phasegenomics/BUSCOphase/lophophora/RSEM
 
@@ -116,11 +112,13 @@ cat nr.*.tar.gz | tar -zxvi -f - -C .
 
 grep -c "^>" Williamsii.fasta
 
+Examples: 
 blastx -query longestWilliamsii.fasta -db /data/home/ginny/blastdb/nr/nr -outfmt "6 qseqid sseqid pident length evalue bitscore staxids" -num_threads 4 -taxids 9606 -out WilliamsiihumanBlastx.txt
 blastx -query longestWilliamsii.fasta -db /data/home/ginny/blastdb/nr/nr -outfmt "6 qseqid sseqid pident length evalue bitscore staxids" -num_threads 4 -taxids 2 -out WilliamsiibacteriaBlastx.txt 
 
-
-
+#Diamond Alignment Quick Reference
+diamond makedb --in reference.fasta -d reference
+diamond blastx -d reference -q reads.fasta -o matches.tsv
 
 #GMAP
 gmap_build -d /data/home/ginny/phasegenomics/yeaman_cactus_4_results_2023-12-15_17-41-03/PGA_assembly.fasta -D /data/home/ginny/genome_alignment/gmap
@@ -129,3 +127,7 @@ Map Only:  gmapl -d JourgmapDB -D /data/home/ginny/genome_alignment/gmap/Jourgma
 Align Only:  gmap -d JourgmapDB -D /data/home/ginny/genome_alignment/gmap/JourgmapDB -A -t 4 /lu213/ginny.li/blast/jour.fasta > 
 
 gffread -w transcripts.fa -g /path/to/genome.fa transcripts.gtf
+
+
+#Seqkit name search and extract
+seqkit replace --pattern ' ^>(\w+).\d' --replacement ' {kv}' --kv-file ids.txt test.fasta --keep-key > test.out
