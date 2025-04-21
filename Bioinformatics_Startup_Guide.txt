@@ -1,0 +1,90 @@
+Bioinformatics Tools and Tips
+Throughout my program, I have learned how to use the basics of UNIX and this section documents common pitfalls should anyone in the Facchini lab needs a quick reference guide.
+Accessing the Bioinformatics Server
+
+The UCalgary Servers can be accessed by activating the general Forticlient VPN with UCalgary credentials (https://www.ucalgary.ca/working-and-learning-home/remote-access-instructions). The servers can be accessed by the SecureShell (ssh) which means, open command prompt on the computer then input: ssh email, hit enter, then the password. 
+
+Downloading programs on UNIX
+There are many ways to download a program to the UNIX server, but first check if it has already been downloaded at /data/programs/ . If there is a folder already with that name and appropriate version number, then no downloads are required. One option is to call the specific path every time such as /data/programs/BLAST blastn . Alternately, there are options to save the path in the shell’s memory. Navigate to the file’s bin and copy the path. A temporary command to only export the path for this specific session is: 
+export PATH="$PATH:/replace/path/to/dir/here"
+
+However, to avoid running this command every time, go to your bash_profile and copy this path into the file. An example of this can be seen below along with my .bash_profile. Exit the shell and log back in to refresh the path. This instructs UNIX to look for programs in these locations and if they cannot find it, the program will not run even if it has been downloaded. 
+If the program is not able to be downloaded, package managers would be the simplest ways to handle downloads. 
+Python3 should be preinstalled in the server and in the paths. Ideally, for each project, a new conda environment and downloads should be made. This can be achieved with:
+virtualenv -p=python3 ENV_NAME_HERE (or python3/python -m venv ENV_NAME_HERE)
+
+conda activate ENV_NAME_HERE
+
+The environment name is arbitrary, but hopefully make it memorable. A list of the environments you created can be found under conda info –envs.
+Virtual environments are important to preserve different package version and compatibilities. For example, if there are conflicting program requirements where one needs v 3.3 but another needs v 5.9, there will be a bit of headache to get the programs to coordinate. In the virtual environment, various version numbers can be maintained. Downloads can be achieved simply with conda install program_name or pip3 install program_name. They will typically download the required dependencies for you.
+For the unfortunate programs that are not in those streamlined downloads, programs can be compiled from source. First obtain a copy of the program:
+1.	It is on github so git clone program_url_here
+2.	It has a compressed download link so wget program_url_here
+3.	If it is a tarball, use tar ¬-zvxf program_name to decompress it
+4.	Go into the program file with cd and locate the README file to see further instructions
+5.	Typically the steps will be:
+./configure
+make
+make test
+make install
+6.	Add the program to your path.
+7.	It may not be this simple, sometimes make install will fail and an administrator of the server will need to be contacted so they can run with higher permissions. 
+If you run a program for the first time after a successful download, and encounter a similar error to this one:
+Can't locate File/Fake.pm in @INC (@INC contains: /usr/local/lib/perl5 /usr/local/share/perl5 /usr/lib/perl5/vendor_perl /usr/share/perl5/vendor_perl /usr/lib/perl5 /usr/share/perl5 .).
+BEGIN failed--compilation aborted.
+
+This means that there are missing perl/cpan libraries that need to be installed before the targeted program can be properly installed. The most common solution would be to use cpan: cpan File/Fake.pm – this should start the install. Ideally, there will be a README or markdown file to read that will instruct which cpan files are needed. Otherwise, keep running the targeted program and downloading cpan dependencies until it works. There will be a few cpan libraries that cannot be installed with this method like the gd.pm graphics library but it will be case by case. Use the bioinformatics resources like the original cpan library webpage, Biostars and StackOverflow, to solve the problem. 
+How to run programs
+There will be multiple ways to run the programs so they don’t drop connection. Once you execute the command, a short command will run quickly but a long command requires an active server. Once that connection is terminated, it will abort the command so it will need to be restarted. Your mileage will vary as some methods will hinder the steps from even running. Experiment and check the processes as needed (type top into the terminal to see the current processes). Curtesy says that no more than 8 CPU are used by a student at a time if it’s a shared server. The three methods I know of are:
+•	Running the program in the background so you can run other commands. 
+o	Type & to the end of the command OR
+o	Ctrl z to undo the command and type bg to send it to the background
+•	“No hang up” to keep running the process even if the shell is terminated
+o	Type nohup in front of any command
+o	The output will be redirected to a file called nohup.out and can be read with less nohup.out
+•	Create a separate screen that exists detached from your shell
+o	Type screen –S name_of_screen
+o	Start the command
+o	Ctrl A then press D or Ctrl D to detach from the screen.
+o	If you pressed Ctrl S by mistake and it’s not responding, press Ctrl Q to unfreeze the system again. 
+
+
+I will not belabour how to run every program. The instructions are available on the program’s instructional guide and it is best to read how to do it. However, here are a few snippets to start the transcriptome assemblies and genomic analysis. This section will have the code snippet and an example of how I used the command. First, check the quality of the transcript reads with FastQC. This will generate an HTML document about various parameters.
+
+fastqc –outdir pathtodirector Reads1.gz Reads2.gz
+fastqc --outdir fastqc /lophophora_transcripts/ NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R1.fastq.gz NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R2.fastq.gz
+
+Next, trim the Illumina adaptor sequences off with Trimmomatic. This will prevent any false reads from pairing real contigs with the Illumina adaptors and including them in the final assembly.
+java -jar /data/programs/Trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -trimlog -phred33 Read1.fastq.gz Read2.fastq.gz ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 -baseout Output_name.fastq.gz
+java -jar /data/programs/Trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -trimlog -phred33 NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R1.fastq.gz NS.X0083.005.NEBNext_dual_i7_309---NEBNext_dual_i5_357.Williamsii_R2.fastq.gz ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 -baseout WilliamsiiTrimmed_1P.fq.gz
+
+Use the Trinity Assembler to create the transcriptome using the trimmed reads.
+/data/programs/trinityrnaseq-v2.14.0/Trinity --seqType fq --left R1.fastq.gz --right R2.fastq.gz --CPU 6 --max_memory 50G
+/data/programs/trinityrnaseq-v2.14.0/Trinity --seqType fq --left NS.1522.001.NEBNext_dual_i7_201---NEBNext_dual_i5_249.Peyote_OUT_R1.fastq.gz --right NS.1522.001.NEBNext_dual_i7_201---NEBNext_dual_i5_249.Peyote_OUT_R2.fastq.gz --CPU 6 --max_memory 50G
+
+Additional and optional post processing can include checking the genome by mapping the raw reads back to the transcriptome using an alignment tool and removing any transcripts that returned as 0 TPM. This will remove erroneously assembled transcripts. RSEM is typically my preferred tool when there are transcriptomes in the process.
+/data/programs/RSEM-1.2.25/rsem-prepare-reference --bowtie2 --bowtie2-path /data/programs/bowtie2-2.3.5 --transcript-to-gene-map transcript_gene_map.fasta transcript.fasta name_of_reference
+/data/programs/RSEM-1.2.25/rsem-calculate-expression -p 8 --paired-end --bowtie2 --bowtie2-path /data/programs/bowtie2-2.3.5 --estimate-rspd --append-names Reads1.fastq Reads2.fastq name_of_reference output/directory/here
+/data/programs/RSEM-1.2.25/rsem-prepare-reference --bowtie2 --bowtie2-path /data/programs/bowtie2-2.3.5 --transcript-to-gene-map peyotewhole_gene_map.fasta peyotewhole.fasta PeyoteWholeReference
+/data/programs/RSEM-1.2.25/rsem-calculate-expression -p 8 --paired-end --bowtie2 --bowtie2-path /data/programs/bowtie2-2.3.5 --estimate-rspd --append-names Peyote_whole_clean.fastq Peyote_whole_cleanR2.fastq PeyoteWholeReference /data/home/ginny/RSEMwholepeyote/output
+
+If there was a genome associated with the analysis, HiSat2 can be used to align next-generation sequencing reads to a single reference genome. HiSat2 indexes the whole genome but creates smaller indexes and graph fingerprints to improve the processing speed but decrease the memory consumption. This step comprises of building a HiSat2 readable database and running the alignment against the trimmed reads.
+hisat2-build genome.fasta genome_name
+hisat2-build /data/home/ginny/phasegenomics/yeaman_cactus_4_results_2023-12-15_17-41-03/PGA_assembly.fasta hisat2jourwhole
+hisat2 -x /lu213/ginny.li/genome_alignment/hisat/hisat2ch12-50jour -q -1 WilliamsiiTrimmed_1P_1P.fq.gz -2 WilliamsiiTrimmed_1P_2P.fq.gz --dta -S ch12-50jour_Williamsii.hisat
+hisat2 -x /lu213/ginny.li/genome_alignment/hisat/hisat2ch1-11jour -q -1 WilliamsiiTrimmed_1P_1P.fq.gz -2 WilliamsiiTrimmed_1P_2P.fq.gz --dta -S ch1-11jour_Williamsii.hisat
+
+The next steps would be to create downstream processing files as HiSat2 is an atypical file format such as bams and sams. Samtools can convert the HiSat outputs to bam. The duplicate entries can be flagged and removed. 
+samtools view -bS genome.hisat > genome.bam
+samtools sort genome.bam -o genome.sorted.bam
+samtools rmdup -S genome.sorted.bam genome.sorted.markdup.bam
+
+samtools view -bS ch1-11jour_Williamsii.hisat > ch1-11jour_Williamsii.bam
+samtools sort ch1-11jour_Williamsii.bam -o ch1-11jour_Williamsii.sorted.bam
+samtools rmdup -S ch1-11jour_Williamsii.sorted.bam ch1-11jour_Williamsii.sorted.markdup.bam
+From the sorted bam files, Stringtie can interpret the files to get a transcripts per million could in gtf file formats with single line annotations of different hits.
+stringtie -o genomeoutput.gtf genome.sorted.markdup.bam
+stringtie -o jour_Williamsii.gtf ch1-11jour_Williamsii.sorted.markdup.bam
+Import the GTF file into Excel or R to continue processing of the file from there. Excel is ideal if there is a small amount of genes to check while R is ideal for a large scale overview. 
+Gmap is a program that is capable of genomic mapping and alignment to get gff3 or GTF outputs that can be parsed in further downstream programs. I used this program for generating the ideograms with the gene density counts and also for coordinates of specific genes on the various scaffolds. 
+gmap –D genome director –d genome database –f gff3_gene –-ordered 
