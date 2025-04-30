@@ -88,3 +88,38 @@ stringtie -o jour_Williamsii.gtf ch1-11jour_Williamsii.sorted.markdup.bam
 Import the GTF file into Excel or R to continue processing of the file from there. Excel is ideal if there is a small amount of genes to check while R is ideal for a large scale overview. 
 Gmap is a program that is capable of genomic mapping and alignment to get gff3 or GTF outputs that can be parsed in further downstream programs. I used this program for generating the ideograms with the gene density counts and also for coordinates of specific genes on the various scaffolds. 
 gmap –D genome director –d genome database –f gff3_gene –-ordered 
+
+#Transposable Element Annotation
+#EDTA is a program that has created the pipeline with many other TE tools but runs it through. As such, tools can hang up and fail at intermediate steps and be hard to troubleshoot. 
+#Download will need to be through the yml file, otherwise, it will meet a critical failure at the dependency check
+git clone https://github.com/oushujun/EDTA.git
+conda env create -f EDTA_2.2.1.yml
+
+conda activate EDTA2 in the biodryad server
+
+#install dependencies
+conda create -n EDTA2.2 -c conda-forge -c bioconda annosine2 biopython cd-hit coreutils genericrepeatfinder genometools-genometools glob2 tir-learner ltr_finder_parallel ltr_retriever mdust multiprocess muscle openjdk perl perl-text-soundex r-base r-dplyr regex repeatmodeler r-ggplot2 r-here r-tidyr tesorter samtools bedtools LTR_HARVEST_parallel HelitronScanner
+
+#simpliest run is just giving it your genome
+perl EDTA.pl genome.fasta -- threads 8
+
+#When EDTA doesn't work, can use RepeatModeler and RepeatMasker for simple TE annotations instead. 
+git clone https://github.com/Dfam-consortium/RepeatModeler
+
+tar -zxvf RepeatModeler-#.#.tar.gz
+
+#run the configuration script
+perl ./configure
+
+#run the script with certain directory locations
+perl ./configure -rscout_dir .. -recon_dir ..
+
+#I installed everything in a conda env
+conda activate repeatmodeler - bioyeaman server 
+
+BuildDatabase -name genome_name genome.fasta
+
+nohup RepeatModeler -database genome_name -threads 8 -LTRStruct >& run.out &
+
+#simple RepeatMasker run
+RepeatMasker -pa 8 -a -e ncbi -dir out_dir reference-genome.fasta
