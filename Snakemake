@@ -1,0 +1,38 @@
+# Folder variables
+raw_dir         = "data/poppydomestication/reads_raw"
+FASTQC_raw_dir  = "data/poppydomestication/fastqc_raw"
+trim_dir        = "data/poppydomestication/fastq_trimmomatic"
+FASTQC_TRIM_DIR = "data/poppydomestication/fastqc_trimmed"
+ASSEMBLY_DIR    = "data/poppydomestication/assembly"
+
+
+rule FastQC_check:
+    input:
+        raw_dir + "/{sample}.fq.gz"
+    output:
+        "FastQCreads{sample}.html"
+    shell:
+        "fastqc {input} 2> {log} > {output}
+
+
+rule Trimmomatic:
+    input:
+        forward = "{sample}r1.fastq.gz"
+        reverse = "{sample}r2.fastq.gz"
+    output:
+        forward = "{sample}trimmed1.fq.gz"
+        reverse = "{sample}trimmed2.fq.gz"
+    shell:
+        "java -jar /data/programs/Trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -trimlog -phred33 {input.forward} {input.reverse} ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 -baseout {output.forward} {output.reverse}"
+
+rule Trinity:
+    input:
+        forward = "{sample}trimmed1.fq.gz"
+        reverse = "{sample}trimmed2.fq.gz"
+    output:
+        fasta = protected(ASSEMBLY_DIR + "/Trinity.fasta")
+    shell:
+        "/data/programs/trinityrnaseq-v2.14.0/Trinity --seqType fq --left {input.forward} --right {input.reverse} --CPU 6 --max_memory 50G --output {output}"
+
+
+        
