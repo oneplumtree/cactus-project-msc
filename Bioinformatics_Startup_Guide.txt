@@ -86,8 +86,10 @@ From the sorted bam files, Stringtie can interpret the files to get a transcript
 stringtie -o genomeoutput.gtf genome.sorted.markdup.bam
 stringtie -o jour_Williamsii.gtf ch1-11jour_Williamsii.sorted.markdup.bam
 Import the GTF file into Excel or R to continue processing of the file from there. Excel is ideal if there is a small amount of genes to check while R is ideal for a large scale overview. 
+
 Gmap is a program that is capable of genomic mapping and alignment to get gff3 or GTF outputs that can be parsed in further downstream programs. I used this program for generating the ideograms with the gene density counts and also for coordinates of specific genes on the various scaffolds. 
-gmap –D genome director –d genome database –f gff3_gene –-ordered 
+gmap –D genome directory –d genome database –f gff3_gene –-summary
+gmap -D /data/poppy/ginny -d psomnif.fasta -f gff3_gene --summary -t 10
 
 #Transposable Element Annotation
 #EDTA is a program that has created the pipeline with many other TE tools but runs it through. As such, tools can hang up and fail at intermediate steps and be hard to troubleshoot. 
