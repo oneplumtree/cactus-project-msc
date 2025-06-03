@@ -1,0 +1,36 @@
+#fastqc - When the raw reads are obtained from illumina sequencing, it is important to verify the quality. FastQC can perform a series of checks. Here we have the example of paired reads.
+/data/programs/FastQC/fastqc --outdir fastqc NS.1923.004.NEBNext_dual_i7_161---NEBNext_dual_i5_161.NS_R1.fastq.gz NS.1923.004.NEBNext_dual_i7_161---NEBNext_dual_i5_161.NS_R2.fastq.gz
+
+#Trimmomatic - Typically, illumina reads require adaptors to anchor them to the platform in order to sequence them. These should be trimmed away to minimize assembly artifacts.
+/home/ginny.li/anaconda3/bin/trimmomatic PE -trimlog -phred33 NS.1923.004.NEBNext_du
+al_i7_161---NEBNext_dual_i5_161.NS_R1.fastq.gz NS.1923.004.NEBNext_dual_i7_161---NEBNext_dual_i5_161.NS_R2.fastq.gz ILLU
+MINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36 -baseout NS_trimmed.fastq.gz
+
+#For de-novo genome assembly, Trinity can be used. They are based off of k-mer collection and de-Brujn graph stitches.  
+/data/programs/trinityrnaseq-v2.14.0/Trinity --seqtype fq --max_memory 50G --left /data/poppy/ginny/MR_trimmed_1P.fastq --right /data/poppy/ginny/MR_trimmed_2P.fastq --CPU 6
+
+
+#Run RSEM - The genes can be quantified using Trinity's RNAseq pipeline.
+/data/programs/trinityrnaseq-v2.14.0/util/align_and_estimate_abundance.pl --transcripts somniferum.trinity.fasta --seqType fq --left MR_trimmed_1P.fastq --right MR_trimmed_2P.fastq --est_method RSEM --output_dir /data/poppy/ginny/rsem --aln_method bowtie2 --prep_reference --thread_count 16 --gene_trans_map somniferum.Trinity.fasta.gene_trans_map --include_rsem_bam
+
+
+#For genome guided assembly, the starting process looks similar with FastQC and Trimmomatic. After the reads are trimmed, feed them to HiSat2. First build the index files
+hisat2-build /data/poppy/ginny/genome-2.3_chr0-10.fasta Psomniferum_genome_hisat2
+
+#Run the hisat2 alignment program
+hisat2 -x /data/ginny/poppy/Psomniferum_genome_hisat2 -q -1 MR_trimmed_1P.fastq -2 MR_trimmed_2P.fastq --dta -S somniferumMR.hisat
+
+#To condense the information into a more common format, samtools was used to sort and remove the duplicates.
+samtools view -bS somniferumMR.hisat > somniferumMR.bam
+samtools sort somniferumMR.bam -o somniferumMR.sorted.bam
+samtools rmdup -S somniferumMR.sorted.bam somniferumMR.sorted.markdup.bam
+
+#samtools can also be used to extract the unmapped reads with the "4" flag.
+samtools fasta -f 4 P_somniferumMR.rmdup.bam > unmapped_psomnif_hisatreadsflag4.fasta
+Flag definitions found here: https://broadinstitute.github.io/picard/explain-flags.html
+
+#After the file is sorted, stringtie is used to quantify the reads.
+stringtie -o somniferumMR.gtf somniferumMR.sorted.markdup.bam
+
+#Can perform a Trininty genome guided assembly after
+/data/programs/trinityrnaseq-v2.14.0/Trinity --genome_guided_bam somniferumMR.sorted.markdup.bam --genome_guided_max_intron 10000 --max_memory 100G --CPU 10
