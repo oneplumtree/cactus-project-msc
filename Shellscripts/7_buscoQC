@@ -1,0 +1,15 @@
+#!/bin/bash
+#Check the assembly completeness
+###################################################
+#####Busco Runs
+###################################################
+for f1 in /data/poppy/domesticationpoppy/hisat2/otherpoppy/*/;
+do
+        name=${f1%%.sorted._trinity_out} #taking the directory name
+        #echo "$name" #check the full path name
+        short=`basename ${f1}` #note the sign are tildes and not quotation marks
+        short=${short%.sorted._trinity_out}
+        echo "Processing Busco Stats for $short"
+        busco -i "$name"/Trinity-GG.fasta -l /data/ginnyli/busco/viridiplantae_odb10 -o "$short" -m tran -f #-m parameter runs BUSCO in transcriptome mode instead of in genome mode
+done
+###################################################
