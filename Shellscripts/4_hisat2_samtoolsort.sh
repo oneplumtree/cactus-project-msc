@@ -15,7 +15,7 @@ do
         echo $short
         echo "Processing $name file with Hisat2"
         hisat2 -x /data/poppy/ginny/hisat2/poppygenomeHisat2 -p 8 \
-	--summary-file -1 "$name"R1_val_1.fq.gz -2 "$name"R2_val_2.fq.gz
+	--summary-file "$short".summaryhisat.txt -1 "$name"R1_val_1.fq.gz -2 "$name"R2_val_2.fq.gz
 done
 
 ##########################
