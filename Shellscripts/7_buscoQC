@@ -3,6 +3,8 @@
 ###################################################
 #####Busco Runs
 ###################################################
+conda activate buscoenv #make sure that there is a busco set actually installed!
+
 for f1 in /data/poppy/domesticationpoppy/hisat2/otherpoppy/*/;
 do
         name=${f1%%.sorted._trinity_out} #taking the directory name
