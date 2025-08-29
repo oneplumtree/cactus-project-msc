@@ -1,0 +1,12 @@
+#!/bin/bash
+########################
+######makeblastdb
+########################
+
+for db in {path to file directory with rootfastas}/*.fasta; 
+do
+        name=${db%%.fasta} #get the DB name with the extension
+        short=`basename $name` #only keep the base name
+        #echo "Making BlastDB for $short"
+        makeblastdb -in "$db" -parse_seqids -dbtype nucl -out "$short"DB
+done
