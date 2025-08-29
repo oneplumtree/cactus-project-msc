@@ -1,0 +1,14 @@
+#!/bin/bash
+########################
+######blast automation
+########################
+
+for db in /data/poppy/domesticationpoppy/blastsearches/automation/rootblastDB/*.nhr; #made all the rootDB and call one copy
+do
+        name=${db%%.nhr} #get the DB name with the extension
+        echo "Processing file $name"
+        short=`basename $name` #only keep the base name
+        #echo "$short"
+        blastn -query alkaloidgenes.fasta -db "$name" -outfmt "6 qseqid sseqid pident length mismatch qstart qend sstart send qseq sseq" \
+        -out "$short"blastn.txt #run blast on multiple different DB in sequence
+done
